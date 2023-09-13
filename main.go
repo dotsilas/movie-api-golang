@@ -1,32 +1,32 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
-	"encoding/json"
+	"log"
 	"math/rand"
 	"net/http"
-	"log"
 	"strconv"
 )
 
-type Movie struct{
-	ID string `json: "id"`
-	Isbn string `json: "isbn"`
-	Title string `json: "title"`
-	Director *Director `json: "director"`
+type Movie struct {
+	ID       string    `json:"id"`
+	Isbn     string    `json:"isbn"`
+	Title    string    `json:"title"`
+	Director *Director `json:"director"`
 }
 
-type Director struct{
-	FirstName string  `json: "firstname"`
-	LastName string  `json: "lastname"`
+type Director struct {
+	FirstName string `json:"firstname"`
+	LastName  string `json:"lastname"`
 }
 
 var movies []Movie
 
 func GetMovies(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
-	json.Encoder(w).Encoder(movies)
+	json.NewEncoder(w).Encode(movies)
 }
 
 func DeleteMovie(w http.ResponseWriter, r *http.Request) {
@@ -34,7 +34,7 @@ func DeleteMovie(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	for index, item := range movies {
 		if item.ID == params["id"] {
-			movies = append(movies[:index], movies[index+1]...)
+			movies = append(movies[:index], movies[index+1:]...)
 		}
 	}
 	json.NewEncoder(w).Encode(movies)
@@ -43,15 +43,15 @@ func DeleteMovie(w http.ResponseWriter, r *http.Request) {
 func GetMovie(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	params := mux.Vars(r)
-	for _, item := range moview {
-		if item.ID == params["id"]{
+	for _, item := range movies {
+		if item.ID == params["id"] {
 			json.NewEncoder(w).Encode(item)
 			return
 		}
 	}
 }
 
-func CreateMovie(w http.ResponseWriter, r *http.Request ){
+func CreateMovie(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	var movie Movie
 	_ = json.NewDecoder(r.Body).Decode(&movie)
@@ -60,12 +60,26 @@ func CreateMovie(w http.ResponseWriter, r *http.Request ){
 	json.NewEncoder(w).Encode(movies)
 }
 
-// UpdateMovie function
+func UpdateMovie(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+	params := mux.Vars(r)
+
+	for index, item := range movies {
+		if item.ID == params["id"] {
+			movies = append(movies[:index], movies[index+1:]...)
+			var movie Movie
+			_ = json.NewDecoder(r.Body).Decode(r)
+			movie.ID = params["id"]
+			movies = append(movies, movie)
+			json.NewEncoder(w).Encode(movies)
+			return
+		}
+	}
+}
 
 func main() {
-	movies = append(movies, Movie{ID: "1", Isbn: "4321", Title: "El mañana", Director : &Director{FirstName: "Vinicio",LastName: "Del Toro"})
-	movies = append(movies, Movie{ID: "2", Isbn: "432r", Title: "El ayer", Director : &Director{FirstName: "Vinicio",LastName: "Del Mono"})
-
+	movies = append(movies, Movie{ID: "1", Isbn: "4321", Title: "El mañana", Director: &Director{FirstName: "Quentin", LastName: "Tarantino"}})
+	movies = append(movies, Movie{ID: "2", Isbn: "432r", Title: "El ayer", Director: &Director{FirstName: "Stanley", LastName: "Kubrick"}})
 
 	router := mux.NewRouter()
 
@@ -75,6 +89,6 @@ func main() {
 	router.HandleFunc("/movies/{id}", UpdateMovie).Methods("PUT")
 	router.HandleFunc("/movie/{id}", DeleteMovie).Methods("DELETE")
 
-	fmt.Printf("Starting port: 8000\n")
-	log.Fatal(http.ListenAndServe(":8000", router))
+	fmt.Printf("Starting port: 8080\n")
+	log.Fatal(http.ListenAndServe(":8080", router))
 }
